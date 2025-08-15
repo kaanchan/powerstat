@@ -11,7 +11,7 @@ except ImportError:
     msvcrt = None
 
 def control_listener(stop_event, control_state):
-    help_text = "ESC: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | C: Say Current Status | S: Toggle System Stats | T: Toggle Timer"
+    help_text = "ESC/Q: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | C: Say Current Status | S: Toggle System Stats | T: Toggle Timer"
     if msvcrt:
         while not stop_event.is_set():
             if msvcrt.kbhit():
@@ -19,9 +19,9 @@ def control_listener(stop_event, control_state):
                 if not key:
                     continue
                 k = key.decode(errors='ignore').lower()
-                if k == '\x1b':  # ESC
+                if k == '\x1b' or k == 'q':  # ESC or Q
                     stop_event.set()
-                    print("\nESC pressed. Exiting...")
+                    print(f"\n{'ESC' if k == '\x1b' else 'Q'} pressed. Exiting...")
                     break
                 elif k == 'h':
                     print(f"\n{help_text}")
@@ -60,35 +60,46 @@ def get_power_status():
 
 import os
 
-def print_resource_usage(control_state=None, start_time=None):
+def print_resource_usage(control_state=None, start_time=None, current_state_start_time=None):
+    def format_time(seconds):
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    
     # Get power status
     power_status = get_power_status()
     power_text = f"Power: {power_status}" if power_status else "Power: Unknown"
     
-    # Get system resources
-    pid = os.getpid()
-    p = psutil.Process(pid)
-    cpu = p.cpu_percent(interval=None)
-    mem = p.memory_info().rss / (1024 * 1024)  # MB
-    
-    # Build status line components
+    # Build status line components in new order: Power → Current/Total → Polling → Mem → CPU → Repeat → Help
     status_parts = [power_text]
     
-    # Add system stats if enabled
-    if control_state and control_state.get('show_system_stats', True):
-        status_parts.extend([f"Script CPU: {cpu:.1f}%", f"Memory: {mem:.1f} MB"])
+    # Add Current/Total runtime
+    if start_time and current_state_start_time:
+        current_time = time.time()
+        current_runtime = current_time - current_state_start_time
+        total_runtime = current_time - start_time
+        status_parts.append(f"Current/Total: {format_time(current_runtime)}/{format_time(total_runtime)}")
     
+    # Add polling interval
     if control_state:
+        polling_interval = control_state.get('interval', 2.0)
+        status_parts.append(f"Polling: {polling_interval}s")
+        
+        # Add system stats if enabled
+        if control_state.get('show_system_stats', True):
+            pid = os.getpid()
+            p = psutil.Process(pid)
+            cpu = p.cpu_percent(interval=None)
+            mem = p.memory_info().rss / (1024 * 1024)  # MB
+            status_parts.extend([f"Mem: {mem:.1f} MB", f"CPU: {cpu:.1f}%"])
+        
+        # Add repeat mode
         repeat_mode = "ON" if control_state.get('repeat', False) else "OFF"
         status_parts.append(f"Repeat: {repeat_mode}")
-        
-        # Add timer if enabled
-        if control_state.get('show_timer', False) and start_time:
-            elapsed = time.time() - start_time
-            hours = int(elapsed // 3600)
-            minutes = int((elapsed % 3600) // 60)
-            seconds = int(elapsed % 60)
-            status_parts.append(f"Running for: {hours:02d}:{minutes:02d}:{seconds:02d}")
+    
+    # Add help prompt
+    status_parts.append("<H> for menu")
     
     print(" | ".join(status_parts), end='\r')
 
@@ -123,6 +134,7 @@ def main():
     
     print("Starting power monitoring...")
     start_time = time.time()  # Track application start time
+    current_state_start_time = start_time  # Track when current power state began
     last_status = get_power_status()
     if last_status:
         print(f"Current power state: {last_status}")
@@ -131,7 +143,7 @@ def main():
     else:
         print("No battery information available.")
         return
-    help_text = "ESC: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | C: Say Current Status | S: Toggle System Stats | T: Toggle Timer"
+    help_text = "ESC/Q: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | C: Say Current Status | S: Toggle System Stats | T: Toggle Timer"
     print(f"\n{help_text}")
     
     # Initialize repeat timing
@@ -146,6 +158,7 @@ def main():
             if voice_ready:
                 announce(f"Power state changed: {status}", voice_ready)
             last_status = status
+            current_state_start_time = current_time  # Reset current state timer
         
         # Handle manual current status request
         if control_state.get('say_current', False):
@@ -166,7 +179,7 @@ def main():
                 announce(f"Current power state: {status}", voice_ready)
                 last_repeat_time = current_time
         
-        print_resource_usage(control_state, start_time)
+        print_resource_usage(control_state, start_time, current_state_start_time)
         time.sleep(control_state['interval'])
 
 if __name__ == "__main__":
