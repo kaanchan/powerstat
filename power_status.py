@@ -34,6 +34,8 @@ def control_listener(stop_event, control_state):
                 elif k == 'r':
                     control_state['repeat'] = not control_state['repeat']
                     print(f"\nRepeat mode: {'ON' if control_state['repeat'] else 'OFF'}")
+                    if control_state['repeat']:
+                        control_state['announce_on_repeat_enable'] = True
                 elif k == 's':
                     control_state['say_current'] = True
 
@@ -72,12 +74,16 @@ def get_power_status():
 
 import os
 
-def print_resource_usage():
+def print_resource_usage(control_state=None):
     pid = os.getpid()
     p = psutil.Process(pid)
     cpu = p.cpu_percent(interval=None)
     mem = p.memory_info().rss / (1024 * 1024)  # MB
-    print(f"Script CPU: {cpu:.1f}% | Memory: {mem:.1f} MB", end='\r')
+    repeat_status = ""
+    if control_state:
+        repeat_mode = "ON" if control_state.get('repeat', False) else "OFF"
+        repeat_status = f" | Repeat: {repeat_mode}"
+    print(f"Script CPU: {cpu:.1f}% | Memory: {mem:.1f} MB{repeat_status}", end='\r')
 
 def initialize_voice_engine():
     print("Initializing voice engine...")
@@ -96,7 +102,7 @@ def main():
     parser = argparse.ArgumentParser(description="PowerStatus App")
     parser.add_argument('--interval', type=float, default=2, help='Polling interval in seconds (default: 2)')
     args = parser.parse_args()
-    control_state = {'interval': args.interval, 'repeat': False, 'repeat_duration': 0, 'say_current': False}
+    control_state = {'interval': args.interval, 'repeat': False, 'repeat_duration': 0, 'say_current': False, 'announce_on_repeat_enable': False}
     listener_thread = threading.Thread(target=control_listener, args=(stop_event, control_state), daemon=True)
     listener_thread.start()
 
@@ -131,7 +137,12 @@ def main():
             if status and voice_ready:
                 announce(f"Current power state: {status}", repeat=control_state['repeat'], stop_event=stop_event, repeat_duration=control_state['repeat_duration'])
         
-        print_resource_usage()
+        if control_state.get('announce_on_repeat_enable', False):
+            control_state['announce_on_repeat_enable'] = False
+            if status and voice_ready:
+                announce(f"Repeat mode enabled. Current power state: {status}", repeat=control_state['repeat'], stop_event=stop_event, repeat_duration=control_state['repeat_duration'])
+        
+        print_resource_usage(control_state)
         time.sleep(control_state['interval'])
 
 if __name__ == "__main__":
