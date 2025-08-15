@@ -1,3 +1,5 @@
 psutil>=7.0.0
 pyttsx3>=2.99
 pywin32>=311
+win10toast>=0.9
+plyer>=2.1.0

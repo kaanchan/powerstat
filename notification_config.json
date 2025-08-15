@@ -1,0 +1,17 @@
+{
+  "notifications": {
+    "enabled": true,
+    "channels": {
+      "toast": {
+        "enabled": true,
+        "duration": 10
+      }
+    },
+    "events": {
+      "power_change": true,
+      "repeat_mode_toggle": false,
+      "service_start": true,
+      "service_stop": true
+    }
+  }
+}

@@ -10,6 +10,14 @@ try:
 except ImportError:
     msvcrt = None
 
+# Import notification system
+try:
+    from notifications import create_notification_manager, send_power_change_notification, send_service_notification
+    NOTIFICATIONS_AVAILABLE = True
+except ImportError:
+    NOTIFICATIONS_AVAILABLE = False
+    print("Notifications not available. Install win10toast for notification support.")
+
 def control_listener(stop_event, control_state):
     help_text = "ESC/Q: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | C: Say Current Status | S: Toggle System Stats | T: Toggle Timer"
     if msvcrt:
@@ -119,8 +127,19 @@ def main():
     stop_event = threading.Event()
     parser = argparse.ArgumentParser(description="PowerStatus App")
     parser.add_argument('--interval', type=float, default=2, help='Polling interval in seconds (default: 2)')
+    parser.add_argument('--no-notifications', action='store_true', help='Disable notifications')
     args = parser.parse_args()
     control_state = {'interval': args.interval, 'repeat': False, 'repeat_duration': 0, 'say_current': False, 'announce_on_repeat_enable': False, 'repeat_interval': 5, 'show_timer': False, 'show_system_stats': True}
+    
+    # Initialize notification manager
+    notification_manager = None
+    if NOTIFICATIONS_AVAILABLE and not args.no_notifications:
+        try:
+            notification_manager = create_notification_manager()
+            print("Notification system initialized.")
+        except Exception as e:
+            print(f"Failed to initialize notifications: {e}")
+    
     listener_thread = threading.Thread(target=control_listener, args=(stop_event, control_state), daemon=True)
     listener_thread.start()
 
@@ -140,6 +159,9 @@ def main():
         print(f"Current power state: {last_status}")
         if voice_ready:
             announce(f"Power monitoring started. Current state: {last_status}", voice_ready)
+        # Send startup notification
+        if notification_manager:
+            send_service_notification(notification_manager, 'service_start', f"PowerStatus monitoring started. Current state: {last_status}")
     else:
         print("No battery information available.")
         return
@@ -157,6 +179,9 @@ def main():
         if status and status != last_status:
             if voice_ready:
                 announce(f"Power state changed: {status}", voice_ready)
+            # Send notification for power state change
+            if notification_manager:
+                send_power_change_notification(notification_manager, status)
             last_status = status
             current_state_start_time = current_time  # Reset current state timer
         
