@@ -39,30 +39,10 @@ def control_listener(stop_event, control_state):
                 elif k == 's':
                     control_state['say_current'] = True
 
-def announce(text, repeat=False, stop_event=None, repeat_duration=0, pause_between_repeats=3):
+def announce(text, use_voice=True):
     print(f"\n{text}")
-    engine = pyttsx3.init()
-    if repeat and stop_event and msvcrt:
-        print("Repeat mode: Press any key to stop announcement.")
-        start_time = time.time()
-        while not stop_event.is_set():
-            engine.say(text)
-            engine.runAndWait()
-            
-            # If repeat_duration > 0, check if we've exceeded the duration
-            if repeat_duration > 0 and (time.time() - start_time) >= repeat_duration:
-                return
-            
-            # Wait for specified pause duration or until key is pressed
-            pause_intervals = int(pause_between_repeats * 10)  # 0.1s intervals
-            for _ in range(pause_intervals):
-                if msvcrt.kbhit():
-                    msvcrt.getch()
-                    return
-                if stop_event.is_set():
-                    return
-                time.sleep(0.1)
-    else:
+    if use_voice:
+        engine = pyttsx3.init()
         engine.say(text)
         engine.runAndWait()
 
@@ -102,7 +82,7 @@ def main():
     parser = argparse.ArgumentParser(description="PowerStatus App")
     parser.add_argument('--interval', type=float, default=2, help='Polling interval in seconds (default: 2)')
     args = parser.parse_args()
-    control_state = {'interval': args.interval, 'repeat': False, 'repeat_duration': 0, 'say_current': False, 'announce_on_repeat_enable': False}
+    control_state = {'interval': args.interval, 'repeat': False, 'repeat_duration': 0, 'say_current': False, 'announce_on_repeat_enable': False, 'repeat_interval': 5}
     listener_thread = threading.Thread(target=control_listener, args=(stop_event, control_state), daemon=True)
     listener_thread.start()
 
@@ -119,28 +99,44 @@ def main():
     if last_status:
         print(f"Current power state: {last_status}")
         if voice_ready:
-            announce(f"Power monitoring started. Current state: {last_status}", repeat=control_state['repeat'], stop_event=stop_event, repeat_duration=control_state['repeat_duration'])
+            announce(f"Power monitoring started. Current state: {last_status}", voice_ready)
     else:
         print("No battery information available.")
         return
     help_text = "ESC: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | S: Say Current Status"
     print(f"\n{help_text}")
+    
+    # Initialize repeat timing
+    last_repeat_time = 0
+    
     while not stop_event.is_set():
+        current_time = time.time()
         status = get_power_status()
+        
+        # Handle power state changes
         if status and status != last_status:
             if voice_ready:
-                announce(f"Power state changed: {status}", repeat=control_state['repeat'], stop_event=stop_event, repeat_duration=control_state['repeat_duration'])
+                announce(f"Power state changed: {status}", voice_ready)
             last_status = status
         
+        # Handle manual current status request
         if control_state.get('say_current', False):
             control_state['say_current'] = False
             if status and voice_ready:
-                announce(f"Current power state: {status}", repeat=control_state['repeat'], stop_event=stop_event, repeat_duration=control_state['repeat_duration'])
+                announce(f"Current power state: {status}", voice_ready)
         
+        # Handle repeat mode enable announcement
         if control_state.get('announce_on_repeat_enable', False):
             control_state['announce_on_repeat_enable'] = False
             if status and voice_ready:
-                announce(f"Repeat mode enabled. Current power state: {status}", repeat=control_state['repeat'], stop_event=stop_event, repeat_duration=control_state['repeat_duration'])
+                announce(f"Repeat mode enabled. Current power state: {status}", voice_ready)
+                last_repeat_time = current_time  # Reset repeat timer
+        
+        # Handle repeat mode announcements
+        if control_state['repeat'] and status and voice_ready:
+            if (current_time - last_repeat_time) >= control_state['repeat_interval']:
+                announce(f"Current power state: {status}", voice_ready)
+                last_repeat_time = current_time
         
         print_resource_usage(control_state)
         time.sleep(control_state['interval'])
