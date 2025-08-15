@@ -9,6 +9,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
+from datetime import datetime
 
 try:
     from plyer import notification as plyer_notification
@@ -216,7 +217,8 @@ def create_notification_manager() -> NotificationManager:
 def send_power_change_notification(manager: NotificationManager, power_state: str):
     """Send notification for power state change"""
     title = "PowerStatus Monitor"
-    message = f"Power state changed to: {power_state}"
+    timestamp = datetime.now().strftime("%H:%M:%S - %d-%m-%Y")
+    message = f"Power state changed: {power_state} @ {timestamp}"
     
     # Determine icon based on power state
     icon_kwargs = {}

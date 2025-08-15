@@ -5,6 +5,7 @@ import psutil
 import argparse
 import os
 import pyttsx3
+from datetime import datetime
 try:
     import msvcrt
 except ImportError:
@@ -17,6 +18,10 @@ try:
 except ImportError:
     NOTIFICATIONS_AVAILABLE = False
     print("Notifications not available. Install win10toast for notification support.")
+
+def format_timestamp() -> str:
+    """Format current time as: hh:mm:ss - dd-mm-yyyy"""
+    return datetime.now().strftime("%H:%M:%S - %d-%m-%Y")
 
 def control_listener(stop_event, control_state):
     help_text = "ESC/Q: Quit | H: Help | < or ,: Slower | > or .: Faster | R: Toggle Repeat | C: Say Current Status | S: Toggle System Stats | T: Toggle Timer"
@@ -177,6 +182,10 @@ def main():
         
         # Handle power state changes
         if status and status != last_status:
+            # Print timestamped console message
+            timestamp = format_timestamp()
+            print(f"\nPower state changed: {status} @ {timestamp}")
+            
             if voice_ready:
                 announce(f"Power state changed: {status}", voice_ready)
             # Send notification for power state change
