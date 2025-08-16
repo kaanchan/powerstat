@@ -19,6 +19,14 @@ except ImportError:
     NOTIFICATIONS_AVAILABLE = False
     print("Notifications not available. Install win10toast for notification support.")
 
+# Import system tray
+try:
+    from system_tray import PowerStatusTray
+    SYSTEM_TRAY_AVAILABLE = True
+except ImportError:
+    SYSTEM_TRAY_AVAILABLE = False
+    print("System tray not available. Install pystray for system tray support.")
+
 def format_timestamp() -> str:
     """Format current time as: hh:mm:ss - dd-mm-yyyy"""
     return datetime.now().strftime("%H:%M:%S - %d-%m-%Y")
@@ -133,6 +141,8 @@ def main():
     parser = argparse.ArgumentParser(description="PowerStatus App")
     parser.add_argument('--interval', type=float, default=2, help='Polling interval in seconds (default: 2)')
     parser.add_argument('--no-notifications', action='store_true', help='Disable notifications')
+    parser.add_argument('--tray', action='store_true', help='Run with system tray icon')
+    parser.add_argument('--no-console', action='store_true', help='Hide console window (use with --tray)')
     args = parser.parse_args()
     control_state = {'interval': args.interval, 'repeat': False, 'repeat_duration': 0, 'say_current': False, 'announce_on_repeat_enable': False, 'repeat_interval': 5, 'show_timer': False, 'show_system_stats': True}
     
@@ -145,8 +155,44 @@ def main():
         except Exception as e:
             print(f"Failed to initialize notifications: {e}")
     
-    listener_thread = threading.Thread(target=control_listener, args=(stop_event, control_state), daemon=True)
-    listener_thread.start()
+    # Get initial power state before system tray initialization
+    initial_power_state = get_power_status()
+    
+    # Initialize system tray
+    system_tray = None
+    tray_thread = None
+    if args.tray and SYSTEM_TRAY_AVAILABLE:
+        try:
+            def get_status_info():
+                current_status = get_power_status()
+                return {
+                    'power_state': current_status or 'Unknown',
+                    'total_runtime': 'Running...'  # We'll improve this later
+                }
+            
+            system_tray = PowerStatusTray(
+                get_status_callback=get_status_info,
+                control_state=control_state,
+                stop_event=stop_event
+            )
+            
+            # Set the correct initial power state before starting
+            if initial_power_state:
+                system_tray.current_power_state = initial_power_state
+            
+            print("Starting system tray...")
+            tray_thread = system_tray.start_threaded()
+            print("System tray initialized. Look for icon in system tray area.")
+        except Exception as e:
+            print(f"Failed to initialize system tray: {e}")
+            system_tray = None
+    elif args.tray:
+        print("System tray requested but not available. Install pystray for system tray support.")
+    
+    # Only start keyboard listener if not in tray-only mode
+    if not args.no_console:
+        listener_thread = threading.Thread(target=control_listener, args=(stop_event, control_state), daemon=True)
+        listener_thread.start()
 
     print("Initializing psutil.cpu...")
     psutil.cpu_percent(interval=0)
@@ -184,13 +230,17 @@ def main():
         if status and status != last_status:
             # Print timestamped console message
             timestamp = format_timestamp()
-            print(f"\nPower state changed: {status} @ {timestamp}")
+            if not args.no_console:
+                print(f"\nPower state changed: {status} @ {timestamp}")
             
             if voice_ready:
                 announce(f"Power state changed: {status}", voice_ready)
             # Send notification for power state change
             if notification_manager:
                 send_power_change_notification(notification_manager, status)
+            # Update system tray icon
+            if system_tray:
+                system_tray.update_power_state(status)
             last_status = status
             current_state_start_time = current_time  # Reset current state timer
         
@@ -213,8 +263,23 @@ def main():
                 announce(f"Current power state: {status}", voice_ready)
                 last_repeat_time = current_time
         
-        print_resource_usage(control_state, start_time, current_state_start_time)
+        # Check if tray requested exit
+        if system_tray and not system_tray.app_running:
+            stop_event.set()
+            break
+            
+        if not args.no_console:
+            print_resource_usage(control_state, start_time, current_state_start_time)
         time.sleep(control_state['interval'])
+    
+    # Cleanup system tray
+    if system_tray:
+        system_tray.stop()
+    
+    # Wait for tray thread to finish if running
+    if tray_thread and tray_thread.is_alive():
+        print("Waiting for system tray to close...")
+        tray_thread.join(timeout=2)
 
 if __name__ == "__main__":
     main()
