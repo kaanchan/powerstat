@@ -1,0 +1,4 @@
+20250816
+- check how cable being plugged in can be detected. even with power supply down, is there way to check that power cable is in device?
+- make Kotlin app that has same functionality as this Python app 
+- look into location functionality for monitoring power status with additional location data
