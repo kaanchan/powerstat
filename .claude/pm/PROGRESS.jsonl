@@ -1,1 +1,2 @@
 {"ts": "2026-09-07T11:26:15Z", "issue": 6, "repo": "powerstat", "type": "fix", "digest": "async voice engine init on daemon thread; monitoring starts immediately; regression test tests/test_power_monitor.py"}
+{"ts": "2026-09-07T02:42:00Z", "issue": 16, "repo": "powerstat", "type": "triage", "digest": "no small code unit available (#10/#13 already closed, #7 epic non-actionable, #11 packaging needs planning session); processed 3 stale TODO.txt lines into issues #16 #17 #18, mirrored into .claude/pm/TODO.md"}
