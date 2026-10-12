@@ -2,3 +2,4 @@
 {"ts": "2026-09-07T11:26:15Z", "agent": "swarm 20260907T064155-powerstat", "issue": 6, "status": "done", "commit": "192c514086a578b27091cc517b2c888f779ef018", "branch": "swarm/20260907-6"}
 {"ts": "2026-09-07T02:40:10Z", "agent": "swarm 20260907T081857-w2-powerstat", "issue": 16, "status": "claimed", "note": "process stale TODO.txt lines into issues"}
 {"ts": "2026-09-07T02:42:00Z", "agent": "swarm 20260907T081857-w2-powerstat", "issue": 16, "status": "done", "note": "filed #16 #17 #18 from TODO.txt, no code unit found"}
+{"ts": "2026-10-12T10:46:48Z", "agent": "swarm 20261012T154840-powerstat", "issue": 16, "status": "claimed", "note": "sprint498: sub-issues, closure pass, #16 probe, docs refresh"}
