@@ -1,4 +1,3 @@
 # PENDING-TASK
-Wave 20261012 (mooladhara#498/#500), branch swarm/20261012-wave in worktree .claude/worktrees/wave-20261012. Nothing pushed.
-Order: (1) sub-issue link DONE (#11->#7) (2) closure pass: #15 candidate, #6 ready-to-test (3) unit #16 cable-detection probe in r&d/16-cable-detection/ (4) docs link check + refresh.
-Resume: check git log on the wave branch for which parts are committed, then continue with the next uncommitted part.
+Wave 20261012 complete on branch swarm/20261012-wave (worktree .claude/worktrees/wave-20261012), contains the #6 fix from swarm/20260907-6. Nothing pushed.
+Resume: KA merges the branch and runs the physical test in r&d/16-cable-detection/README.md; next unit is a planning session for #11 (packaging) and a decision on follow-up gaps from #10/#13 recorded in #15.
