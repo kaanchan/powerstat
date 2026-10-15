@@ -52,28 +52,33 @@ class PowerMonitor:
         
     def initialize(self):
         """Initialize the power monitor"""
-        # Initialize voice if enabled
-        if self.voice_enabled:
-            self.voice_ready = initialize_voice_engine()
-            if not self.voice_ready and self.console_output:
-                print("Warning: Voice engine not available. Continuing with console output only.")
-        
-        # Get initial power status
+        # Get initial power status first so monitoring can start without waiting on voice
         self.last_status = get_power_status()
         if self.last_status:
             if self.console_output:
                 print(f"Current power state: {self.last_status}")
-            if self.voice_ready:
-                announce(f"Power monitoring started. Current state: {self.last_status}", self.voice_ready)
             # Send startup notification
             if self.notification_manager:
-                send_service_notification(self.notification_manager, 'service_start', 
+                send_service_notification(self.notification_manager, 'service_start',
                                         f"PowerStatus monitoring started. Current state: {self.last_status}")
         else:
             if self.console_output:
                 print("No battery information available.")
             return False
+
+        # Initialize voice in the background so it doesn't block monitoring startup
+        if self.voice_enabled:
+            threading.Thread(target=self._initialize_voice_engine, daemon=True).start()
+
         return True
+
+    def _initialize_voice_engine(self):
+        """Background target: initialize voice engine without blocking startup"""
+        self.voice_ready = initialize_voice_engine()
+        if self.voice_ready:
+            announce(f"Power monitoring started. Current state: {self.last_status}", self.voice_ready)
+        elif self.console_output:
+            print("Warning: Voice engine not available. Continuing with console output only.")
         
     def get_power_status(self):
         """Get current power status - wrapper for external access"""

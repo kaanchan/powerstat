@@ -1,5 +1,7 @@
 # PowerStatus App
 
+> **Start here:** run `python power_status.py` (see Usage below); open work is tracked at <https://github.com/kaanchan/powerstat/issues>.
+
 A Python application for Windows that announces power state changes (battery/AC) via voice and console notifications.
 
 ## Features
@@ -7,10 +9,9 @@ A Python application for Windows that announces power state changes (battery/AC)
 - Announces changes using `pyttsx3` (speech)
 - Console notifications
 
-## Future Plans
-- System tray integration
-- Windows service support
-- GUI notifications
+## Status (2026-10-12)
+- Shipped: system tray (`system_tray.py`, #9), toast notifications (`notifications.py`), Windows service scaffolding (`service.py`, #10/#13)
+- Open: professional packaging and installer (#11, under the service epic #7)
 
 ## Requirements
 - Python 3.8+
