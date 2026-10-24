@@ -33,8 +33,7 @@
 - Repeat mode functionality with configurable intervals
 
 ### Current Issues Tracking
-- Status line should show repeat mode indicator (ON | OFF)
-- Repeat mode should auto-announce current state when enabled
+- Repeat-mode indicator and auto-announce shipped (commit ff657c3); open work is on GitHub: https://github.com/kaanchan/powerstat/issues
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
